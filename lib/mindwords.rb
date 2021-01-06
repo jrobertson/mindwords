@@ -44,27 +44,11 @@ class MindWords
     a = rexlize(h)
     doc = Rexle.new(['root', {}, '', *a])
 
-    duplicates = []
-    doc.root.each_recursive do |e|
-
-      puts 'e: ' + e.name.inspect if @debug
-      rows = e.parent.xpath('//' + e.name)
-      next if rows.length < 2
-
-      rows[1..-1].each do |e2|
-        puts 'e2: ' + e2.name.inspect if @debug
-        duplicates << [e.backtrack.to_s, e2.backtrack.to_s] #unless e2.has_elements?
-      end
-    end
-
-    duplicates.each do |path, oldpath| 
-      e = doc.element(path);
-      e2 = doc.element(oldpath);  
-      e2.parent.add e
-      e2.delete
-    end   
-
-    # remove redundant nodes
+    
+    # remove duplicates which appear in the same branch above the nested node
+    rm_duplicates(doc)
+    
+    # remove redundant nodes (outsiders)
     # a redundant node is where all children exist in existing nested nodes
 
     redundants = doc.root.elements.map do |e|
@@ -78,7 +62,8 @@ class MindWords
     end
 
     redundants.compact.each {|x| doc.element(x).delete }
-
+    rm_duplicates(doc)
+    
     @outline = treeize doc.root
     
   end
@@ -104,6 +89,30 @@ class MindWords
         [x.first, {}, x.first.gsub(/_/,' '), *rexlize(x.last)]
       end
     end
+
+  end
+  
+  def rm_duplicates(doc)
+    
+    duplicates = []
+    doc.root.each_recursive do |e|
+
+      puts 'e: ' + e.name.inspect if @debug
+      rows = e.parent.xpath('//' + e.name)
+      next if rows.length < 2
+
+      rows[1..-1].each do |e2|
+        puts 'e2: ' + e2.name.inspect if @debug
+        duplicates << [e.backtrack.to_s, e2.backtrack.to_s]
+      end
+    end
+
+    duplicates.each do |path, oldpath| 
+      e = doc.element(path);
+      e2 = doc.element(oldpath);  
+      e2.parent.add e
+      e2.delete
+    end   
 
   end
 
