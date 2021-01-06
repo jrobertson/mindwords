@@ -46,7 +46,6 @@ car
 finances
   cryptocurrency
     bitcoin
-    binance
     accounts
       binance
 </pre>
