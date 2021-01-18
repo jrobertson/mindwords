@@ -3,11 +3,12 @@
 # file: mindwords.rb
 
 require 'rexle'
+require 'line-tree'
 
 class MindWords
   using ColouredText
   
-  def initialize(s, debug: false)
+  def initialize(s, parent: nil, debug: false)
 
     @debug = debug
     @a = s.strip.lines
@@ -17,7 +18,7 @@ class MindWords
       word = line.split(/ (?=#)/,2)
 
     end
-
+    
     h = {}
 
     lines.each do |x|
@@ -68,14 +69,23 @@ class MindWords
     redundants.compact.each {|x| doc.element(x).delete }
     rm_duplicates(doc)
     
-    @xml = doc.root.xml pretty: true
-    @outline = treeize doc.root
+    node = if parent then
+      found = doc.root.element('//' + parent)
+      found ? found : doc.root
+    else
+      doc.root
+    end
+    
+    @xml = node.xml pretty: true
+    @outline = treeize node
     
   end
   
   def search(keyword)
     
     a = @a.grep(/#{keyword}/i).map do |line|
+      
+      puts 'line: ' + line.inspect if @debug
       
       words = line.split
       r = words.grep /#{keyword}/i
@@ -89,7 +99,8 @@ class MindWords
     #return a[0][0] if a.length < 2
 
     a2 = a.sort_by(&:last).map(&:first)
-    MindWords.new(a2.join)
+    puts 'a2: ' + a2.inspect if @debug
+    MindWords.new(a2.join, parent: keyword, debug: @debug)
     
   end
   
@@ -150,6 +161,10 @@ class MindWords
     end.join("\n")
   end
   
+  def to_words()
+    to_outline.lines.map {|x| x[/\w[\w ]+/] }
+  end
+  
   def to_xml()
     @xml
   end
@@ -192,6 +207,7 @@ class MindWords
     duplicates.each do |path, oldpath| 
       e = doc.element(path);
       e2 = doc.element(oldpath);  
+      next unless e2
       e2.parent.add e
       e2.delete
     end   
@@ -235,3 +251,4 @@ class MindWords
   end  
 
 end
+
