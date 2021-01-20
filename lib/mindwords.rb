@@ -95,6 +95,8 @@ class MindWords
     @outline = treeize node
     
     node.root.each_recursive do |e|
+    
+      e.attributes[:id] = e.attributes[:title].downcase.gsub(/ +/,'-')      
       
       s = e.parent.attributes[:breadcrumb] ? \
           e.parent.attributes[:breadcrumb].to_s  + ' / ' : ''
@@ -103,7 +105,7 @@ class MindWords
       r = @a.grep(/^#{e.attributes[:title]} #/i)
       next unless r.any?
       e.attributes[:hashtags] = r[0].scan(/(?<=#)\w+/).join(' ')
-      e.attributes[:id] = e.attributes[:title].downcase.gsub(/ +/,'-')
+
       
     end
     
