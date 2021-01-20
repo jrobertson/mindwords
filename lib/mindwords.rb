@@ -5,13 +5,26 @@
 require 'rexle'
 require 'line-tree'
 
+module HashCopy
+  refine Hash do
+    
+    def deep_clone()
+      Marshal.load(Marshal.dump(self))
+    end
+    
+  end
+end
+
 class MindWords
   using ColouredText
+  using HashCopy
+  
   
   def initialize(s, parent: nil, debug: false)
 
     @debug = debug
-    @a = s.strip.lines
+    @a = s.strip.gsub(/^\n/,'').lines
+    @a.shift if @a.first =~ /<\?mindwords\?>/
     
     lines = @a.map do |line|
 
@@ -20,18 +33,21 @@ class MindWords
     end
     
     h = {}
+    @hashtags = {}
 
-    lines.each do |x|
+    lines.each do |title, rawtags|
 
-      x.last.scan(/#(\w+)/).flatten(1).each do |rawtag|
+      rawtags.scan(/#(\w+)/).flatten(1).each do |rawtag|
         tag = rawtag.gsub(/ +/, '_')
         h[tag] ||= []
-        h[tag] << x.first
+        h[tag] << title
       end
 
     end
+    
+    @hashtags = h.deep_clone.sort.map {|tag, fields| [tag, fields.sort]}.to_h
 
-    # does the key exist as a field?
+    # does the key exist as a field? Nesting of hash object is performed here.
 
     h.keys.each do |key|
 
@@ -76,10 +92,32 @@ class MindWords
       doc.root
     end
     
-    @xml = node.xml pretty: true
     @outline = treeize node
     
+    node.root.each_recursive do |e|
+      
+      s = e.parent.attributes[:breadcrumb] ? \
+          e.parent.attributes[:breadcrumb].to_s  + ' / ' : ''
+      e.attributes[:breadcrumb] = s +  e.value.strip
+      
+      r = @a.grep(/^#{e.attributes[:title]} #/i)
+      next unless r.any?
+      e.attributes[:hashtags] = r[0].scan(/(?<=#)\w+/).join(' ')
+      e.attributes[:id] = e.attributes[:title].downcase.gsub(/ +/,'-')
+      
+    end
+    
+    @xml = node.xml pretty: true
+    
   end
+  
+  def element(id)
+    
+    doc = Rexle.new(@xml)
+    e =  doc.root.element("//*[@id='#{id}']")
+    #e.attributes[:breadcrumb].to_s if e
+    
+  end  
   
   def search(keyword)
     
@@ -146,6 +184,10 @@ class MindWords
   def to_h()
     @h
   end
+  
+  def to_hashtags()
+    @hashtags
+  end
 
   def to_outline(sort: true)
     sort ? a2tree(tree_sort(LineTree.new(@outline).to_a)) : @outline
@@ -153,12 +195,16 @@ class MindWords
   
   def to_s(colour: false)
     
-    return @a.join unless colour
+    header = "<?mindwords?>\n\n"
+    return header + @a.join unless colour
     
-    @a.map do |x|
+    body = @a.map do |x|
         title, hashtags = x.split(/(?=#)/,2)
         title + hashtags.chomp.brown
     end.join("\n")
+    
+    header + body
+    
   end
   
   def to_words()
@@ -179,11 +225,16 @@ class MindWords
 
       case x
       when String
-        [x.gsub(/ +/,'_'),  {}, x]
+        [x.gsub(/ +/,'_'),  {title: x}, x]
       when Hash
-        [x.keys.first, {}, x.keys.first.gsub(/_/,' '), *rexlize(x.values.first)]
+        [
+          x.keys.first.gsub(/_/,' '), 
+          {title: x.keys.first}, 
+          x.keys.first,
+         *rexlize(x.values.first)
+        ]
       when Array
-        [x.first, {}, x.first.gsub(/_/,' '), *rexlize(x.last)]
+        [x.first.gsub(/_/,' '), {title: x.first}, x.first, *rexlize(x.last)]
       end
     end
 
