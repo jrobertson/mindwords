@@ -47,23 +47,24 @@ class MindWords
     
     @hashtags = h.deep_clone.sort.map {|tag, fields| [tag, fields.sort]}.to_h
 
-    # does the key exist as a field? Nesting of hash object is performed here.
-
-    h.keys.each do |key|
-
-      r = h.detect {|_, value| value.include? key}
-      next unless r
-      h[r.first].delete key
-      h[r.first] << {key => h[key]}
-      #puts r.inspect
-      h.delete key
-
-    end
-
-    @h = h
     
     a = rexlize(h)
     doc = Rexle.new(['root', {}, '', *a])
+
+    # apply node nesting
+
+    doc.root.elements.each do |e|
+      
+      doc.root.xpath('//' + e.name).each do |e2|
+        
+        next if e2 === e
+        
+        e2.parent.add e
+        e2.delete
+        
+      end
+      
+    end
 
     
     # remove duplicates which appear in the same branch above the nested node
@@ -83,7 +84,7 @@ class MindWords
     end
 
     redundants.compact.each {|x| doc.element(x).delete }
-    rm_duplicates(doc)
+ 
     
     node = if parent then
       found = doc.root.element('//' + parent)
@@ -245,24 +246,22 @@ class MindWords
   def rm_duplicates(doc)
     
     duplicates = []
+    
     doc.root.each_recursive do |e|
 
-      puts 'e: ' + e.name.inspect if @debug
       rows = e.parent.xpath('//' + e.name)
       next if rows.length < 2
 
-      rows[1..-1].each do |e2|
-        puts 'e2: ' + e2.name.inspect if @debug
-        duplicates << [e.backtrack.to_s, e2.backtrack.to_s]
-      end
+      rows[0..-2].each {|e2| duplicates << e.backtrack.to_s }
+    
     end
 
-    duplicates.each do |path, oldpath| 
-      e = doc.element(path);
-      e2 = doc.element(oldpath);  
-      next unless e2
-      e2.parent.add e
-      e2.delete
+    duplicates.each do |path|
+      
+      puts 'path: ' + path.inspect if @debug
+      e = doc.element(path)
+      e.delete if e
+      
     end   
 
   end
@@ -304,4 +303,3 @@ class MindWords
   end  
 
 end
-
