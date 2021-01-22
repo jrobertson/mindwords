@@ -211,7 +211,7 @@ class MindWords
   end
   
   def to_words()
-    to_outline.lines.map {|x| x[/\w[\w ]+/] }
+    to_outline.lines.map {|x| x[/\w[\w ]+/] }.uniq
   end
   
   def to_xml()
