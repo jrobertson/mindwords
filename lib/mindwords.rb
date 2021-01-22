@@ -228,16 +228,19 @@ class MindWords
 
       case x
       when String
-        [x.gsub(/ +/,'_'),  {title: x}, x]
+        [x.downcase.gsub(/ +/,''),  {title: x}, x]
       when Hash
         [
-          x.keys.first.gsub(/_/,' '), 
+          x.keys.first.downcase.gsub(/_/,' '), 
           {title: x.keys.first}, 
           x.keys.first,
          *rexlize(x.values.first)
         ]
       when Array
-        [x.first.gsub(/_/,' '), {title: x.first}, x.first, *rexlize(x.last)]
+        [
+          x.first.downcase.gsub(/_/,' '), 
+          {title: x.first}, x.first, *rexlize(x.last)
+        ]
       end
     end
 
@@ -303,3 +306,4 @@ class MindWords
   end  
 
 end
+
