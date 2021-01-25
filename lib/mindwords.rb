@@ -3,6 +3,7 @@
 # file: mindwords.rb
 
 require 'rexle'
+require 'rxfhelper'
 require 'line-tree'
 
 module HashCopy
@@ -20,9 +21,11 @@ class MindWords
   using HashCopy
   
   
-  def initialize(s, parent: nil, debug: false)
+  def initialize(raws, parent: nil, debug: false)
 
     @debug = debug
+    
+    s, _ = RXFHelper.read raws
     @a = s.strip.gsub(/^\n/,'').lines
     @a.shift if @a.first =~ /<\?mindwords\?>/
     
