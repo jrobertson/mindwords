@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'mindwords'
-  s.version = '0.5.0'
+  s.version = '0.5.1'
   s.summary = 'Helps get what\'s in your mind into a structure using ' + 
       'words and hashtags.'
   s.authors = ['James Robertson']
