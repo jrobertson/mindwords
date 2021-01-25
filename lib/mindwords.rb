@@ -22,22 +22,31 @@ class MindWords
   
   attr_accessor :lines
   
-  def initialize(raws, parent: nil, debug: false)
+  def initialize(raws='', parent: nil, debug: false)
 
     @parent, @debug = parent, debug
-    
+        
     s, _ = RXFHelper.read raws
     @lines = s.strip.gsub(/^\n/,'').lines
     @lines.shift if @lines.first =~ /<\?mindwords\?>/
     
   end
   
+  def breadcrumb()
+    @parent.attributes[:breadcrumb].split(/ +\/ +/) if @parent
+  end
+    
+  
   def element(id)
     
-    doc = Rexle.new(@xml)
+    doc = Rexle.new(to_xml())
     e =  doc.root.element("//*[@id='#{id}']")
     #e.attributes[:breadcrumb].to_s if e
     
+  end
+  
+  def hashtags()
+    @parent.attributes[:hashtags].split if @parent
   end
 
   
@@ -60,7 +69,11 @@ class MindWords
 
     a2 = a.sort_by(&:last).map(&:first)
     puts 'a2: ' + a2.inspect if @debug
-    MindWords.new(a2.join, parent: keyword, debug: @debug)
+    e = element(keyword.downcase.gsub(/ +/,'-'))
+    
+    return nil if e.nil?
+    
+    MindWords.new(a2.join, parent: e, debug: @debug)
     
   end
   
@@ -135,6 +148,7 @@ class MindWords
   end
   
   def to_xml()
+    build() unless @xml
     @xml
   end
 
@@ -198,7 +212,7 @@ class MindWords
  
     
     node = if @parent then
-      found = doc.root.element('//' + @parent)
+      found = doc.root.element('//' + @parent.name)
       found ? found : doc.root
     else
       doc.root
