@@ -20,13 +20,15 @@ class MindWords
   using ColouredText
   using HashCopy
   
-  attr_accessor :lines
+  attr_accessor :lines, :filepath
   
   def initialize(raws='', parent: nil, debug: false)
 
     @parent, @debug = parent, debug
         
-    s, _ = RXFHelper.read raws
+    s, type = RXFHelper.read raws
+    
+    @filepath = raws if type == :file or type == :dfs
     @lines = s.strip.gsub(/^\n/,'').lines
     @lines.shift if @lines.first =~ /<\?mindwords\?>/
     
@@ -49,6 +51,12 @@ class MindWords
     @parent.attributes[:hashtags].split if @parent
   end
 
+  def save(file=@filepath)
+    
+    puts 'before save' if @debug
+    File.write file, to_s()
+    
+  end
   
   def search(keyword)
     
