@@ -34,6 +34,10 @@ class MindWords
     
   end
   
+  def add(line)
+    @lines << line
+  end
+  
   def breadcrumb()
     @parent.attributes[:breadcrumb].split(/ +\/ +/) if @parent
   end
@@ -52,6 +56,8 @@ class MindWords
   end
 
   def save(file=@filepath)
+    
+    return if @lines.empty?
     
     puts 'before save' if @debug
     File.write file, to_s()
@@ -140,7 +146,7 @@ class MindWords
   def to_s(colour: false)
     
     header = "<?mindwords?>\n\n"
-    return header + @lines.join unless colour
+    return header + @lines.map(&:chomp).join("\n") unless colour
     
     body = @lines.map do |x|
         title, hashtags = x.split(/(?=#)/,2)
