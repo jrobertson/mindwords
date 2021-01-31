@@ -129,11 +129,7 @@ class MindWords
     @lines = tag_sort().lines
     self
   end
-  
-  def to_h()
-    @h
-  end
-  
+    
   def to_hashtags()
     @hashtags
   end
@@ -155,11 +151,24 @@ class MindWords
     
     header + body
     
-  end
+  end  
   
   def to_words()
-    to_outline.lines.map {|x| x[/\w[\w ]+/] }.uniq
-  end
+    
+    h = {}
+    
+    Rexle.new(to_xml).root.each_recursive do |e|
+      
+      h[e.attributes[:title]] = {
+        breadcrumb: e.attributes[:breadcrumb], 
+        hashtags: e.attributes[:hashtags]
+      }
+      
+    end
+    
+    h
+    
+  end  
   
   def to_xml()
     build() unless @xml
