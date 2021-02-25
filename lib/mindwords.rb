@@ -63,6 +63,41 @@ class MindWords
     File.write file, to_s()
     
   end
+
+  # Accepts a list of words with the aim of returning a MindWords document 
+  # using matched words with hashtags from the existing MindWords document.
+  #
+  def reflect(raws)
+    
+    h = to_h
+    
+    missing_words = []
+    
+    # add the tags from the main list
+    a = raws.strip.lines.map do |x| 
+      if h[x.chomp] then
+        [x.chomp, h[x.chomp]]
+      else
+        missing_words << x
+        nil
+      end
+    end.compact
+
+    # add any linkage words from the tags
+    #
+    a.map(&:last).flatten(1).each do |s|
+
+      a << [s, h[s]] if h[s]
+
+    end
+
+    # remove suplicates lines and transform it into a raw mindwords format
+    #
+    raws3 = a.uniq.map {|s,tags| [s, tags.map {|x| '#' + x }.join(' ')].join(' ') }.join("\n")
+
+    [MindWords.new(raws3), missing_words]
+    
+  end
   
   def search(keyword)
     
@@ -129,6 +164,19 @@ class MindWords
     @lines = tag_sort().lines
     self
   end
+
+  def to_a()
+    
+    @lines.map do |x| 
+      s, rawtags = x.split(/(?= #)/,2)
+      [s, rawtags.scan(/(?<=#)\w+/)]
+    end
+    
+  end
+  
+  def to_h()
+    to_a.to_h
+  end
     
   def to_hashtags()
     @hashtags
@@ -138,6 +186,8 @@ class MindWords
     build()
     sort ? a2tree(tree_sort(LineTree.new(@outline).to_a)) : @outline
   end
+  
+  alias to_tree to_outline
   
   def to_s(colour: false)
     
