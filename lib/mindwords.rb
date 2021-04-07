@@ -121,8 +121,28 @@ class MindWords
     e = element(keyword.downcase.gsub(/ +/,'-'))
     
     return nil if e.nil?
+
+    # find and add any linkage support lines
+    #
     
-    MindWords.new(a2.join, parent: e, debug: @debug)
+    a3 = []
+
+    a2.each do |line|
+      
+      line.chomp.scan(/#[^ ]+/).each do |hashtag|
+        
+        puts 'hashtag: ' + hashtag.inspect  if @debug
+        r2 = @lines.grep(/^#{hashtag[1..-1]} #/)
+        a3 << r2.first if r2        
+        
+      end
+    end
+
+    puts 'a2: ' + a2.inspect if @debug
+    a2.concat a3
+    
+    MindWords.new(a2.uniq.join, parent: e, debug: @debug)
+    #MindWords.new(a2.uniq.join,  debug: @debug)
     
   end
   
@@ -283,10 +303,9 @@ class MindWords
 
     redundants.compact.each {|x| doc.element(x).delete }
  
-    
     node = if @parent then
       found = doc.root.element('//' + @parent.name)
-      found ? found : doc.root
+      found ? found.parent : doc.root
     else
       doc.root
     end
@@ -399,3 +418,25 @@ class MindWords
 
 end
 
+class MindWordsWidget
+
+  def initialize()
+
+  end
+
+  
+  # can be used for main entries or a words list
+  #
+  def input(content: '', action: 'mwupdate', target: 'icontent')
+
+<<EOF
+<form action='#{action}' method='post' target='#{target}'>
+  <textarea name='content' cols='30' rows='19'>
+#{content}
+  </textarea>
+  <input type='submit' value='Submit'/>
+</form>
+EOF
+  end
+
+end
