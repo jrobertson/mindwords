@@ -29,8 +29,30 @@ class MindWords
     s, type = RXFHelper.read raws
     
     @filepath = raws if type == :file or type == :dfs
-    @lines = s.strip.gsub(/^\n/,'').lines
-    @lines.shift if @lines.first =~ /<\?mindwords\?>/
+    lines = s.strip.gsub(/^\n/,'').lines
+    lines.shift if lines.first =~ /<\?mindwords\?>/       
+    
+    @lines = lines.inject([]) do |r,line|
+      
+      # the following does 2 things:
+      #      1. splits words separated by a bar (|) onto their own line
+      #      2. prefixes a word with an underscore if the word is the 
+      #         same as the hashtag. That way it's not removed by the 
+      #         redundancy checker
+
+      raw_words, raw_hashtags = line.split(/(?= #)/,2)
+      words = raw_words.split(/ *\| */)
+      hashtags = raw_hashtags.scan(/(?<=#)\w+/)
+      
+      words.each do |word| 
+        
+        linex = (word + ' ' + raw_hashtags)
+        r << (hashtags.include?(word) ? linex.sub!(/\b#{word}\b/, '_\0') \
+              : linex)
+      end
+
+      r
+    end
     
   end
   
@@ -40,6 +62,10 @@ class MindWords
   
   def breadcrumb()
     @parent.attributes[:breadcrumb].split(/ +\/ +/) if @parent
+  end
+  
+  def headings()
+    breadcrumb[0..-2]
   end
     
   
@@ -99,7 +125,7 @@ class MindWords
     
   end
   
-  def search(keyword)
+  def search(keyword, succinct: true)
     
     a = @lines.grep(/#{keyword}/i).map do |line|
       
@@ -120,7 +146,7 @@ class MindWords
     puts 'a2: ' + a2.inspect if @debug
     e = element(keyword.downcase.gsub(/ +/,'-'))
     
-    return nil if e.nil?
+    return MindWords.new(a2.uniq.join,  debug: @debug) if e.nil?
 
     # find and add any linkage support lines
     #
@@ -141,8 +167,11 @@ class MindWords
     puts 'a2: ' + a2.inspect if @debug
     a2.concat a3
     
-    MindWords.new(a2.uniq.join, parent: e, debug: @debug)
-    #MindWords.new(a2.uniq.join,  debug: @debug)
+    if succinct then
+      MindWords.new(a2.uniq.join, parent: e, debug: @debug)
+    else
+      MindWords.new(a2.uniq.join,  debug: @debug)
+    end
     
   end
   
@@ -310,6 +339,22 @@ class MindWords
       doc.root
     end
     
+    # the following removes any undescore prefix from words which were the 
+    # same as the hashtag
+    
+    node.root.each_recursive do |e|
+
+      next unless e
+      puts 'e: ' + e.inspect if @debug
+      
+      e.attributes[:id] = e.attributes[:id].sub(/^_/,'') if e.attributes[:id]
+      e.attributes[:title] = e.attributes[:title].sub(/^_/,'') if e.attributes[:title]
+      e.value = e.value.sub(/^_/,'')
+      
+    end    
+    
+    # ----
+    
     @outline = treeize node
     
     node.root.each_recursive do |e|
@@ -372,7 +417,7 @@ class MindWords
 
     duplicates.each do |path|
       
-      puts 'path: ' + path.inspect if @debug
+      puts 'pathx: ' + path.inspect if @debug
       e = doc.element(path)
       e.delete if e
       
