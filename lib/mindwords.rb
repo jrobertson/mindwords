@@ -46,7 +46,7 @@ class MindWords
       
       words.each do |word| 
         
-        linex = (word + ' ' + raw_hashtags)
+        linex = (word +  raw_hashtags)
         r << (hashtags.include?(word) ? linex.sub!(/\b#{word}\b/, '_\0') \
               : linex)
       end
@@ -282,12 +282,12 @@ class MindWords
 
     @lines.each do |line|
 
-      title, rawtags = line.split(/ (?=#)/,2)
+      title, rawtags = line.split(/(?= #)/,2)
       
       rawtags.scan(/#(\w+)/).flatten(1).each do |rawtag|
         tag = rawtag.gsub(/ +/, '_')
         h[tag] ||= []
-        h[tag] << title
+        h[tag] << title.strip
       end
 
     end
@@ -350,6 +350,7 @@ class MindWords
       e.attributes[:id] = e.attributes[:id].sub(/^_/,'') if e.attributes[:id]
       e.attributes[:title] = e.attributes[:title].sub(/^_/,'') if e.attributes[:title]
       e.value = e.value.sub(/^_/,'')
+      e.name = e.name.sub(/^_/,'')
       
     end    
     
