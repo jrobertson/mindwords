@@ -80,6 +80,12 @@ class MindWords
   def hashtags()
     @parent.attributes[:hashtags].split if @parent
   end
+  
+  # helpful when searching for a word itself using autosuggest
+  #
+  def lookup(s)
+    self.to_words.keys.sort.grep /^#{s}/i
+  end    
 
   def save(file=@filepath)
     
