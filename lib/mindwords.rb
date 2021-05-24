@@ -29,7 +29,7 @@ class MindWords
     s, type = RXFHelper.read raws
     
     @filepath = raws if type == :file or type == :dfs
-    lines = s.strip.gsub(/^\n/,'').lines
+    lines = s.strip.gsub(/^\n/,'').lines.uniq
     lines.shift if lines.first =~ /<\?mindwords\?>/       
     
     @lines = lines.inject([]) do |r,line|
@@ -56,8 +56,10 @@ class MindWords
     
   end
   
-  def add(line)
-    @lines << line
+  def add(s)
+    
+    @lines.concat s.strip.lines
+    
   end
   
   def breadcrumb()
@@ -86,13 +88,30 @@ class MindWords
   def lookup(s)
     self.to_words.keys.sort.grep /^#{s}/i
   end    
+  
+  # same as #lines but inludes the breadcrumb path; Helpful to identify 
+  # which words don't have a breadcrumb path.
+  #
+  def linesplus()
+    
+    to_a.map do |word, _|
+      r = search word
+      r ? [word, r.breadcrumb] : [r, nil]
+    end
+    
+  end
 
   def save(file=@filepath)
     
     return if @lines.empty?
     
     puts 'before save' if @debug
-    File.write file, to_s()
+    
+    if File.exists? file then
+      File.write file, to_s()
+    else
+      raise 'Filepath not given'
+    end
     
   end
 
@@ -238,8 +257,17 @@ class MindWords
   end
 
   def to_outline(sort: true)
+    
     build()
-    sort ? a2tree(tree_sort(LineTree.new(@outline).to_a)) : @outline
+    
+    if sort then
+      a = LineTree.new(@outline).to_a
+      puts ('a: ' + a.inspect).debug if @debug 
+      a2tree(tree_sort(a))
+    else
+      @outline
+    end
+    
   end
   
   alias to_tree to_outline
@@ -335,6 +363,8 @@ class MindWords
       e.backtrack.to_s if dups
 
     end
+    
+    puts 'redundants: ' + redundants.inspect if @debug
 
     redundants.compact.each {|x| doc.element(x).delete }
  
