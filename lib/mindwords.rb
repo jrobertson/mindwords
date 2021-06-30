@@ -107,11 +107,7 @@ class MindWords
     
     puts 'before save' if @debug
     
-    if File.exists? file then
-      File.write file, to_s()
-    else
-      raise 'Filepath not given'
-    end
+    File.write file, to_s()
     
   end
 
