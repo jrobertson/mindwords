@@ -26,33 +26,7 @@ class MindWords
 
     @parent, @debug = parent, debug
 
-    s, type = RXFHelper.read raws
-
-    @filepath = raws if type == :file or type == :dfs
-    lines = (s.strip.gsub(/(^\n|\r)/,'') + "\n").lines.uniq
-    lines.shift if lines.first =~ /<\?mindwords\?>/
-
-    @lines = lines.inject([]) do |r,line|
-
-      # the following does 2 things:
-      #      1. splits words separated by a bar (|) onto their own line
-      #      2. prefixes a word with an underscore if the word is the
-      #         same as the hashtag. That way it's not removed by the
-      #         redundancy checker
-
-      raw_words, raw_hashtags = line.split(/(?= #)/,2)
-      words = raw_words.split(/ *\| */)
-      hashtags = raw_hashtags.scan(/(?<=#)\w+/)
-
-      words.each do |word|
-
-        linex = (word +  raw_hashtags)
-        r << (hashtags.include?(word) ? linex.sub!(/\b#{word}\b/, '_\0') \
-              : linex)
-      end
-
-      r
-    end
+    import(raws) if raws.length > 1
 
   end
 
@@ -93,6 +67,37 @@ class MindWords
       @parent.attributes[:hashtags].split if @parent
     end
 
+  end
+
+  def import(raws)
+
+    s, type = RXFHelper.read raws
+
+    @filepath = raws if type == :file or type == :dfs
+    lines = (s.strip.gsub(/(^\n|\r)/,'') + "\n").lines.uniq
+    lines.shift if lines.first =~ /<\?mindwords\?>/
+
+    @lines = lines.inject([]) do |r,line|
+
+      # the following does 2 things:
+      #      1. splits words separated by a bar (|) onto their own line
+      #      2. prefixes a word with an underscore if the word is the
+      #         same as the hashtag. That way it's not removed by the
+      #         redundancy checker
+
+      raw_words, raw_hashtags = line.split(/(?= #)/,2)
+      words = raw_words.split(/ *\| */)
+      hashtags = raw_hashtags.scan(/(?<=#)\w+/)
+
+      words.each do |word|
+
+        linex = (word +  raw_hashtags)
+        r << (hashtags.include?(word) ? linex.sub!(/\b#{word}\b/, '_\0') \
+              : linex)
+      end
+
+      r
+    end
   end
 
   # helpful when searching for a word itself using autosuggest
