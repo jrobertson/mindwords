@@ -19,6 +19,7 @@ end
 class MindWords
   using ColouredText
   using HashCopy
+  include RXFHelperModule
 
   attr_accessor :lines, :filepath
 
@@ -64,7 +65,7 @@ class MindWords
       found = search(title)
       found.hashtags() if found
     else
-      @parent.attributes[:hashtags].split if @parent
+      @parent.attributes[:hashtags].split if @parent and @parent.attributes[:hashtags]
     end
 
   end
@@ -124,7 +125,7 @@ class MindWords
 
     puts 'before save' if @debug
 
-    File.write file, to_s()
+    FileX.write file, to_s()
 
   end
 
