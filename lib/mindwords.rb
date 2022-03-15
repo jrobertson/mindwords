@@ -3,7 +3,7 @@
 # file: mindwords.rb
 
 require 'rexle'
-require 'rxfhelper'
+require 'rxfreadwrite'
 require 'line-tree'
 
 module HashCopy
@@ -19,8 +19,9 @@ end
 class MindWords
   using ColouredText
   using HashCopy
-  include RXFHelperModule
+  include RXFReadWriteModule
 
+  attr_reader :words_missing
   attr_accessor :lines, :filepath
 
   def initialize(raws='', parent: nil, debug: false)
@@ -345,6 +346,7 @@ class MindWords
 
     a = rexlize(h)
     doc = Rexle.new(['root', {}, '', *a])
+    puts 'doc.xml: ' + doc.xml(pretty: true) if @debug
 
     # apply node nesting
 
@@ -361,6 +363,7 @@ class MindWords
 
     end
 
+    puts 'after nesting; doc.xml: ' + doc.xml(pretty: true) if @debug
 
     # remove duplicates which appear in the same branch above the nested node
     rm_duplicates(doc)
@@ -407,6 +410,45 @@ class MindWords
     # ----
 
     @outline = treeize node
+
+    # ----
+
+    # It's common for words to be missing from the outline, either because
+    # they have erroneously been flagged as redundant or lack specific hashtag
+    # context. Below, we attempt to identify the missing words with a
+    # suggestion on how to fix it.
+
+    words = @outline.lines.map(&:strip)
+    orig_words = to_s().lines.map {|x| x[/^[^#]+(?= #)/]}.compact
+    @words_missing = orig_words - words
+
+    if @words_missing.any? then
+
+      tags = []
+      @words_missing.inject(tags) do |r,word|
+
+        found = to_s().lines.grep(/#{word}/)
+
+        if found then
+          r << found.first.scan(/#\w+/).map {|x| x[1..-1]}
+        else
+          r
+        end
+
+      end
+
+      add_sugg = tags.uniq.map do |atag|
+        ("%s #%s" % [atag[0], atag[1]]).bg_black
+      end
+
+      puts ('@words_missing: ' + @words_missing.join(', ') ).warn
+      puts "suggestion: try adding the following:".info
+      puts add_sugg.join("\n")
+      puts
+
+    end
+
+    # ----
 
     node.root.each_recursive do |e|
 
