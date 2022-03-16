@@ -5,6 +5,8 @@
 require 'rexle'
 require 'rxfreadwrite'
 require 'line-tree'
+require 'polyrex'
+
 
 module HashCopy
   refine Hash do
@@ -73,7 +75,7 @@ class MindWords
 
   def import(raws)
 
-    s, type = RXFHelper.read raws
+    s, type = RXFReader.read raws
 
     @filepath = raws if type == :file or type == :dfs
     lines = (s.strip.gsub(/(^\n|\r)/,'') + "\n").lines.uniq
@@ -575,6 +577,102 @@ class MindWordsWidget
   <input type='submit' value='Submit'/>
 </form>
 EOF
+  end
+
+end
+
+class MindWordsPlus
+
+  attr_reader :to_px
+
+  def initialize(s, fields: %w(title content), debug: false)
+
+    lt = LineTree.new(s)
+    h = lt.to_h
+
+    mw = MindWords.new(h.keys.join("\n"))
+    outline = mw.to_outline
+
+    out = outline.lines.map do |line|
+
+      word = line[/\w[^$]+/]
+
+      found = h.keys.find do |key, value|
+
+        if debug then
+          puts 'key2: ' + key[/^[^#]+(?= #)/].inspect
+          puts 'word: ' + word.chomp.inspect
+        end
+
+        word.chomp == key[/^[^#]+(?= #)/]
+      end
+
+      puts 'found: ' + found.inspect if debug
+
+      if found and h[found][:body] then
+        puts '***' + h[found][:body].keys.inspect  if debug
+        line.chomp + ' # ' + h[found][:body].keys.join('<br/>') + "\n"
+      else
+        line
+      end
+
+    end
+
+    puts out.join if debug
+
+    px = Polyrex.new(schema: "entries[title]/entry[#{fields.join(', ')}]",
+                     delimiter: ' # ')
+    px.import out.join
+    @px = px
+
+  end
+
+  def to_ph()
+
+    lines = []
+
+    @px.each_recursive do |x, parent, level|
+
+      if level.to_i < 3 then
+        line = ("\n" + '#' * (level.to_i + 1)) + ' ' + x.title + "\n\n"
+      else
+        line = '*' + ' ' + x.title + "\n"
+      end
+
+      if x.content.length >= 1 then
+        txt = '- ' + x.content.gsub('&lt;','<').gsub('&gt;','>')
+        line += "\n" + txt.gsub('<br/>',"\n- ") + "\n"
+      end
+
+      lines << line
+
+    end
+
+    lines.join.gsub(/\n\n\n/,"\n\n")
+  end
+
+  def to_px()
+    @px
+  end
+
+  def to_tree()
+
+    lines = []
+    @px.each_recursive do |x, parent, level|
+
+      line = ('  ' * level) + x.title
+
+      if x.content.length >= 1 then
+        txt = x.content.gsub('&lt;','<').gsub('&gt;','>')
+        indent = '  ' * (level+1) + '* '
+        line += "\n" + indent +  txt.gsub('<br/>',"\n" + indent)
+      end
+
+      lines << line
+    end
+
+    lines.join("\n")
+
   end
 
 end
