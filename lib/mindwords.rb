@@ -78,10 +78,54 @@ class MindWords
     s, type = RXFReader.read raws
 
     @filepath = raws if type == :file or type == :dfs
-    lines = (s.strip.gsub(/(^\n|\r)/,'') + "\n").lines.uniq
-    lines.shift if lines.first =~ /<\?mindwords\?>/
+    rawlines = (s.strip.gsub(/(^\n|\r)/,'') + "\n").lines.uniq
+    rawlines.shift if rawlines.first =~ /<\?mindwords\?>/
 
-    @lines = lines.inject([]) do |r,line|
+    # remove mindwords lines which don't have a hashtag
+    lines = rawlines.reject do |line|
+
+      found = line[/^\w+[^#]+$/]
+
+      if found then
+        puts ('no hashtag found on this line -> ' + line).warn
+      end
+
+      found
+
+    end
+
+    #--- handle indented text, indicated there are *groups* of words
+
+    s2 = lines.join.gsub(/\n\s*$/,'')
+    puts s2 if @debug
+    a = s2.strip.split(/(?=^\w+)/)
+    a2 = a.inject([]) do |r,x|
+
+      if x =~ /\n\s+/ then
+
+        a4 = x.lines[1..-1].map do |line|
+
+          puts 'x.lines[0]: ' + x.lines[0].inspect if @debug
+          hashtag = if x.lines[0][/ /] then
+            x.lines[0].gsub(/\b\w/) {|x| x.upcase}.gsub(/ /,'')
+          else
+            x.lines[0]
+          end
+
+          "%s #%s" % [line.strip, hashtag]
+        end
+
+        r.concat a4
+
+      else
+        r << x
+      end
+
+    end
+
+    #-- end of indented text handler
+
+    @lines = a2.inject([]) do |r,line|
 
       # the following does 2 things:
       #      1. splits words separated by a bar (|) onto their own line
